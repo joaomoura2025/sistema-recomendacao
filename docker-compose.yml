@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: recomendacao
+      POSTGRES_PASSWORD: recomendacao
+      POSTGRES_DB: recomendacao
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recomendacao -d recomendacao"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://recomendacao:recomendacao@db:5432/recomendacao
+      DATA_DIR: /app/data/ml-latest-small
+      SEED_ON_STARTUP: "true"
+      RETRAIN_EVERY: "200"
+    volumes:
+      # Guarda os CSVs baixados, para não baixar de novo a cada build
+      - movielens:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  movielens:
